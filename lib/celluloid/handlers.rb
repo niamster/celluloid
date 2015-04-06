@@ -6,6 +6,10 @@ module Celluloid
       @handlers = Set.new
     end
 
+    def self.pmatch(message)
+      Proc.new {|h| h.match(message.__getobj__)}
+    end
+
     def handle(*patterns, &block)
       patterns.each do |pattern|
         handler = Handler.new pattern, block
@@ -15,7 +19,7 @@ module Celluloid
 
     # Handle incoming messages
     def handle_message(message)
-      handler = @handlers.find { |h| h.match(message) }
+      handler = @handlers.find &Handlers.pmatch(::WeakRef.new message)
       handler.call message if handler
       handler
     end

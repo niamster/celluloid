@@ -45,6 +45,14 @@ module Celluloid
     end
     attr_reader :proxy, :subject
 
+    def self.ptask
+      Proc.new do |meta|
+        meta[:call].dispatch(meta[:subject])
+        meta[:call] = nil
+        meta[:subject] = nil
+      end
+    end
+
     def invoke(call)
       meth = call.method
       if meth == :__send__
@@ -56,9 +64,8 @@ module Celluloid
         end
       end
 
-      task(:call, meth, :dangerous_suspend => meth == :initialize) {
-        call.dispatch(@subject)
-      }
+      task(:call, meth, :dangerous_suspend => meth == :initialize,
+           :call => call, :subject => @subject, &Cell.ptask)
     end
 
     def task(task_type, method_name = nil, meta = nil, &block)
@@ -66,9 +73,9 @@ module Celluloid
       meta.merge!(:method_name => method_name)
       @actor.task(task_type, meta) do
         if @exclusive_methods && method_name && @exclusive_methods.include?(method_name.to_sym)
-          Celluloid.exclusive { yield }
+          Celluloid.exclusive { yield meta }
         else
-          yield
+          yield meta
         end
       end
     end

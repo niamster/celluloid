@@ -77,7 +77,7 @@ module Celluloid
     def dispatch(obj)
       CallChain.current_id = @chain_id
       result = super(obj)
-      respond SuccessResponse.new(self, result)
+      respond SuccessResponse.new(self.task, result)
     rescue Exception => ex
       # Exceptions that occur during synchronous calls are reraised in the
       # context of the sender
@@ -108,11 +108,15 @@ module Celluloid
       response.value
     end
 
+    def self.preceive(task)
+      Proc.new do |msg|
+        msg.respond_to?(:task) and msg.task == task
+      end
+    end
+
     def wait
-      loop do
-        message = Celluloid.mailbox.receive do |msg|
-          msg.respond_to?(:call) and msg.call == self
-        end
+      while true
+        message = Celluloid.mailbox.receive &SyncCall.preceive(self.task)
 
         if message.is_a?(SystemEvent)
           Thread.current[:celluloid_actor].handle_system_event(message)
@@ -121,7 +125,7 @@ module Celluloid
           if message.respond_to?(:value)
             # FIXME: disable block execution if on :sender and (exclusive or outside of task)
             # probably now in Call
-            break message
+            return message
           else
             message.dispatch
           end

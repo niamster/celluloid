@@ -1,14 +1,14 @@
 module Celluloid
   # Responses to calls
   class Response
-    attr_reader :call, :value
+    attr_reader :task, :value
 
-    def initialize(call, value)
-      @call, @value = call, value
+    def initialize(task, value)
+      @task, @value = task, value
     end
 
     def dispatch
-      @call.task.resume self
+      @task.resume self
     end
   end
 

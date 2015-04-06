@@ -2,6 +2,7 @@ require 'logger'
 require 'thread'
 require 'timeout'
 require 'set'
+require 'weakref'
 
 $CELLULOID_DEBUG = false
 
